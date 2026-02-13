@@ -105,6 +105,7 @@
         <br>
         <button class="translation-btn" id="translateBtn" onclick="toggleTranslation()">点此翻译月份至“中文”</button>
         <button onclick="checkDate()">确认</button>
+        <button onclick="good = 1">遇到bug了？点此按钮</button>
     </div>
 
     <script>
@@ -112,7 +113,7 @@
         let currentMonth = 4;
         let currentDay = 1;
         let isTranslated = false; // 跟踪当前是否显示翻译
-
+        let good = 0;
         // 存储月份数据以便切换翻译
         const monthData = [
             { value: 4, name: 'April', japanese: 'よんがつ' },
@@ -231,7 +232,8 @@
             // [4, 8, 12, 2, 1, 7, 6, 3, 5, 11, 10, 9]
             const month_list = [4, 3, 7, 0, 8, 6, 5, 1, 11, 10, 9, 2];
             const year = currentYear;
-            const month = monthData[month_list[currentMonth - 1]].value;
+            let month = monthData[month_list[currentMonth - 1]].name;
+            if(good)month = monthData[month_list[currentMonth - 1]].value;
             const day = String(currentDay).padStart(2, '0');
             return `${year}-${month}-${day}`;
         }
