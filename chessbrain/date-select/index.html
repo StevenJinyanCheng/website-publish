@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日期选择</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        
+        .container {
+            text-align: center;
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        
+        .date-input {
+            margin: 20px 0;
+            font-size: 18px;
+        }
+        
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        
+        button:hover {
+            background-color: #45a049;
+        }
+        
+        .year-controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .year-controls input {
+            width: 80px;
+            text-align: center;
+            margin: 0 5px;
+        }
+        
+        .year-controls button {
+            width: 30px;
+            padding: 5px;
+            margin: 0 5px;
+        }
+        
+        .date-selectors {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        
+        .date-selectors select {
+            padding: 5px;
+            font-size: 16px;
+        }
+        
+        .translation-btn {
+            margin-top: 15px;
+            background-color: #2196F3;
+        }
+        
+        .translation-btn:hover {
+            background-color: #0b7dda;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>输入今天日期免费领奖</h1>
+        <div class="date-input">
+            <div class="year-controls">
+                <button onclick="changeYear(-1)">-</button>
+                <input type="text" id="yearInput" readonly>
+                <button onclick="changeYear(1)">+</button>
+            </div>
+            <div class="date-selectors">
+                <select id="monthSelect" onchange="updateDate()"></select>
+                <select id="daySelect" onchange="updateDate()"></select>
+            </div>
+        </div>
+        <br>
+        <button class="translation-btn" id="translateBtn" onclick="toggleTranslation()">点此翻译月份至“中文”</button>
+        <button onclick="checkDate()">确认</button>
+    </div>
+
+    <script>
+        let currentYear = 2024;
+        let currentMonth = 4;
+        let currentDay = 1;
+        let isTranslated = false; // 跟踪当前是否显示翻译
+
+        // 存储月份数据以便切换翻译
+        const monthData = [
+            { value: 4, name: 'April', japanese: 'よんがつ' },
+            { value: 8, name: 'August', japanese: 'はちがつ' },
+            { value: 12, name: 'December', japanese: 'じゅうにがつ' },
+            { value: 2, name: 'February', japanese: 'にがつ' },
+            { value: 1, name: 'January', japanese: 'いちがつ' },
+            { value: 7, name: 'July', japanese: 'しちがつ' },
+            { value: 6, name: 'June', japanese: 'ろくがつ' },
+            { value: 3, name: 'March', japanese: 'さんがつ' },
+            { value: 5, name: 'May', japanese: 'ごがつ' },
+            { value: 11, name: 'November', japanese: 'じゅういちがつ' },
+            { value: 10, name: 'October', japanese: 'じゅうがつ' },
+            { value: 9, name: 'September', japanese: 'くがつ' }
+        ];
+
+        function populateMonthSelect() {
+            const monthSelect = document.getElementById('monthSelect');
+            monthSelect.innerHTML = '';
+            
+            for (let i = 0; i < monthData.length; i++) {
+                const option = document.createElement('option');
+                option.value = monthData[i].value;
+                
+                // 根据当前是否翻译状态设置显示文本
+                if (isTranslated) {
+                    option.textContent = monthData[i].japanese;
+                } else {
+                    option.textContent = monthData[i].name;
+                }
+                
+                if (monthData[i].value === currentMonth) {
+                    option.selected = true;
+                }
+                monthSelect.appendChild(option);
+            }
+        }
+
+        function populateDaySelect() {
+            const dayEquations = [
+                { day: 1, equation: "3x² = 3/x" },
+                { day: 2, equation: "log₂(x) = 1" },
+                { day: 3, equation: "x² - 6x + 9 = 0" },
+                { day: 4, equation: "2^x = 16" },
+                { day: 5, equation: "x! / 24 = 5" },
+                { day: 6, equation: "log₆(x) = 1" },
+                { day: 7, equation: "(x+1)² = 49 + 2x + 1, x > 0" },
+                { day: 8, equation: "2^x = 256" },
+                { day: 9, equation: "x² - 18x + 81 = 0" },
+                { day: 10, equation: "log₁₀(x) = 1" },
+                { day: 11, equation: "x² = 121, x > 0" },
+                { day: 12, equation: "5x = 60" },
+                { day: 13, equation: "x² = 78 + 91, x > 0" },
+                { day: 14, equation: "x² = 196 cos 0, x > 0" },
+                { day: 15, equation: "2x = 30" },
+                { day: 16, equation: "log₂(x) = 4" },
+                { day: 17, equation: "x² = 289, x > 0" },
+                { day: 18, equation: "x² = 6^(log₆324), x > 0" },
+                { day: 19, equation: "x² = 361, x > 0" },
+                { day: 20, equation: "30x = 600" },
+                { day: 21, equation: "2x = 42" },
+                { day: 22, equation: "x² = 484, x > 0" },
+                { day: 23, equation: "x² = 529, x > 0" },
+                { day: 24, equation: "x = 4!" },
+                { day: 25, equation: "x² = 625, x > 0" },
+                { day: 26, equation: "x² = 676, x > 0" },
+                { day: 27, equation: "log₃(x) = 3" },
+                { day: 28, equation: "2x = 56" },
+                { day: 29, equation: "x² = 841, x > 0" },
+                { day: 30, equation: "sin(x deg) = 1/2" },
+                { day: 31, equation: "x = 27 BOR 31" }
+            ];
+            
+            // 打乱数组顺序
+            for (let i = dayEquations.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [dayEquations[i], dayEquations[j]] = [dayEquations[j], dayEquations[i]];
+            }
+            
+            const daySelect = document.getElementById('daySelect');
+            daySelect.innerHTML = '';
+            
+            // 计算当月天数
+            const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
+            
+            // 只取当月所需的天数
+            const monthEquations = dayEquations.slice(0, daysInMonth);
+            
+            for (let i = 0; i < monthEquations.length; i++) {
+                const equation = monthEquations[i];
+                
+                const option = document.createElement('option');
+                option.value = equation.day; // 使用实际日期值作为value
+                option.textContent = equation.equation + " 时的 x 日";
+                if (equation.day === currentDay) {
+                    option.selected = true;
+                }
+                daySelect.appendChild(option);
+            }
+        }
+
+        function updateDate() {
+            currentMonth = parseInt(document.getElementById('monthSelect').value);
+            currentDay = parseInt(document.getElementById('daySelect').value);
+            
+            populateDaySelect();
+            
+            const maxDays = new Date(currentYear, currentMonth, 0).getDate();
+            if (currentDay > maxDays) {
+                currentDay = maxDays;
+                document.getElementById('daySelect').value = currentDay;
+            }
+        }
+
+        function getCurrentDate() {
+            // [4, 8, 12, 2, 1, 7, 6, 3, 5, 11, 10, 9]
+            const month_list = [4, 3, 7, 0, 8, 6, 5, 1, 11, 10, 9, 2];
+            const year = currentYear;
+            const month = monthData[month_list[currentMonth - 1]].value;
+            const day = String(currentDay).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function changeYear(change) {
+            const confirm1 = confirm("是否修改？");
+            if (!confirm1) return;
+            
+            const confirm2 = confirm("确定要修改？");
+            if (!confirm2) return;
+            
+            const confirm3 = confirm("真的要修改吗？");
+            if (!confirm3) return;
+
+            const confirm4 = confirm("真的要修改吗？");
+            if (!confirm4) return;
+
+            const confirm5 = confirm("真的真的要修改吗？");
+            if (!confirm5) return;
+
+            const confirm6 = confirm("真的真的真的要修改吗？（最后一次了！）");
+            if (!confirm6) return;
+            
+            confirm("行，我改");
+            confirm("修改完毕");
+
+            currentYear += change;
+            document.getElementById('yearInput').value = currentYear;
+            populateDaySelect(); 
+        }
+
+        function toggleTranslation() {
+            isTranslated = !isTranslated;
+            
+            const translateBtn = document.getElementById('translateBtn');
+            if (isTranslated) {
+                translateBtn.textContent = '日语是中文的“变种”！点此取消翻译';
+            } else {
+                translateBtn.textContent = '点此翻译月份至“中文”';
+            }
+            
+            populateMonthSelect();
+        }
+
+        function checkDate() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const currentDate = `${year}-${month}-${day}`;
+            
+            const selectedDate = getCurrentDate();
+
+            if (selectedDate === currentDate) {
+                window.location.href = './status/correct/index.html';
+            } else {
+                // 将选中日期和当前日期传递给错误页面
+                const encodedSelectedDate = encodeURIComponent(selectedDate);
+                const encodedCurrentDate = encodeURIComponent(currentDate);
+                window.location.href = `./status/wrong/index.html?selectedDate=${encodedSelectedDate}&currentDate=${encodedCurrentDate}`;
+            }
+        }
+        window.onload = function() {
+            document.getElementById('yearInput').value = currentYear;
+            populateMonthSelect();
+            populateDaySelect();
+        };
+    </script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/vcd15cbe7772f49c399c6a5babf22c1241717689176015" integrity="sha512-ZpsOmlRQV6y907TI0dKBHq9Md29nnaEIPlkf84rnaERnq6zvWvPUqr2ft8M1aS28oN72PdrCzSjY4U6VaAw1EQ==" data-cf-beacon='{"version":"2024.11.0","token":"c2eff5f29dd7495e933b036e0089cc77","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
+</html>
