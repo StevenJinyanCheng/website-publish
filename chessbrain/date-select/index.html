@@ -104,9 +104,9 @@
         </div>
         <br>
         <button class="translation-btn" id="translateBtn" onclick="toggleTranslation()">点此翻译月份至“中文”</button>
-        <button onclick="checkDate()">确认</button>
-        <button onclick="good = 1">遇到bug了？点此按钮</button>
-        <button onclick="better = 1">还有bug？点击按钮</button>
+        <button onclick="checkDate(), displayButton1()">确认</button>
+        <button id="bugButton1" onclick="good = 1, displayButton2()" style="display: none;">遇到bug了？点此按钮</button>
+        <button onclick="better = 1" style="display: none;">还有bug？点击按钮</button>
     </div>
 
     <script>
@@ -131,7 +131,18 @@
             { value: 10, name: 'October', japanese: 'じゅうがつ' },
             { value: 9, name: 'September', japanese: 'くがつ' }
         ];
-
+        // 检查 displayBug 参数
+        if (getUrlParameter('displayBug')) {
+            displayButton1();
+        }
+        function displayButton1() {
+            const btn1 = document.getElementById('bugButton1');
+            btn1.style.display = 'inline-block';
+        }
+        function displayButton2() {
+            const btn2 = document.querySelector('button[onclick="better = 1"]');
+            btn2.style.display = 'inline-block';
+        }
         function populateMonthSelect() {
             const monthSelect = document.getElementById('monthSelect');
             monthSelect.innerHTML = '';
@@ -299,6 +310,12 @@
                 window.location.href = `./status/wrong/index.html?selectedDate=${encodedSelectedDate}&currentDate=${encodedCurrentDate}`;
             }
         }
+
+        function getUrlParameter(name) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(name);
+        }
+
         window.onload = function() {
             document.getElementById('yearInput').value = currentYear;
             populateMonthSelect();
