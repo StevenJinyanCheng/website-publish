@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Prime list page</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                line-height: 1.6;
+                margin: 0;
+                background-color: #ffffff;
+            }
+            header {
+                background-color: #4CAF50;
+                color: white;
+                padding: 1em;
+                text-align: center;
+            }
+            h1 {
+                text-align: center;
+            }
+            h2, h3 {
+                color: #4CAF50;
+            }
+            p {
+                font-size: 1.1em;
+            }
+            ul {
+                list-style-type: disc;
+                margin-left: 20px;
+            }
+            code {
+                background-color: #f1f1f1;
+                padding: 2px 4px;
+                font-family: monospace;
+            }
+            .example, .sieve {
+                background-color: #fff;
+                border-left: 6px solid #4CAF50;
+                padding: 10px;
+                margin: 20px 0;
+            }
+            .sieve {
+                border-color: #2196F3;
+            }
+            footer {
+                margin-top: 30px;
+                text-align: center;
+                font-size: 0.9em;
+                color: #666;
+            }
+            .cell {
+                box-sizing: border-box;
+                border-radius: 8px;
+                display: flex; align-items: center; justify-content: center;
+                font-weight: 600;
+                background: #eee;
+                color: #111;
+                border: 2px solid #fff;
+                transition: background 0.22s, color 0.22s, transform 0.18s, border-color 0.22s;
+                position: relative;
+            }
+            .cell.one {
+                color: #888;
+            }
+            .cell.prime {
+                background: #4CAF50;
+            }
+            .cell.notPrime {
+                background: #f88;
+            }
+            .cell.selected {
+                transform: scale(1.2);
+                z-index: 2;
+                box-shadow: 0 0 10px #4CAF5088;
+            }
+            .cell.crossing {
+                transform: scale(0.88);
+                opacity: 0.7;
+            }
+
+            /* Controls */
+            #controls {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 10px;
+                align-items: center;
+                justify-content: center;
+                padding: 14px;
+                background: #f9f9f9;
+                border-bottom: 1px solid #ddd;
+            }
+            #controls button {
+                padding: 7px 18px;
+                border: none;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 0.92rem;
+                font-weight: 600;
+            }
+            #startBtn   { background: #4CAF50; color: #fff; }
+            #startBtn:hover:not(:disabled) { background: #43a047; }
+            #startBtn:disabled { background: #aaa; cursor: not-allowed; }
+            #restartBtn { background: #e0e0e0; color: #333; }
+            #restartBtn:hover { background: #bdbdbd; }
+            #controls label { font-size: 0.9rem; color: #444; }
+            #controls input[type=range] { accent-color: #4CAF50; cursor: pointer; }
+            #controls input[type=number] {
+                width: 80px;
+                padding: 5px 7px;
+                border: 1px solid #ccc;
+                border-radius: 6px;
+                font-size: 0.9rem;
+            }
+            #sizeWrap, #offsetWrap {
+                display: flex; align-items: center; gap: 6px;
+                background: #fff;
+                border: 1px solid #ddd;
+                border-radius: 8px;
+                padding: 6px 12px;
+            }
+            #offsetWrap { border-color: #2196F3; }
+            #offsetToggle {
+                accent-color: #2196F3;
+                width: 16px; height: 16px;
+                cursor: pointer;
+            }
+            #offsetFields { display: none; gap: 6px; align-items: center; }
+            #offsetFields.visible { display: flex; }
+            #offsetFields input { border-color: #2196F3; }
+            #info {
+                text-align: center;
+                min-height: 1.5em;
+                font-size: 0.95rem;
+                color: #555;
+                padding: 6px;
+            }
+
+            #grid {
+                display: grid;
+                justify-content: center;
+                padding: 16px;
+                gap: 5px;
+            }
+        </style>
+    </head>
+    <body>
+        <header>
+            <h1>Prime list</h1>
+        </header>
+
+        <div id="controls">
+            <!-- Start / Restart -->
+            <button id="startBtn">▶ Start</button>
+            <button id="restartBtn">↺ Restart</button>
+
+            <!-- Speed -->
+            <label>Speed: <input type="range" id="speed" min="10" max="950" value="500" step="10"></label>
+
+            <!-- Grid size -->
+            <div id="sizeWrap">
+                <label style="margin:0">Grid:</label>
+                <input type="number" id="inputCols" min="2" max="50" value="10" style="width:52px"> cols ×
+                <input type="number" id="inputRows" min="2" max="100" value="10" style="width:52px"> rows
+                <button id="applySize" style="background:#4CAF50;color:#fff;padding:5px 12px;border:none;border-radius:6px;cursor:pointer;font-weight:600">Apply</button>
+            </div>
+
+            <!-- Offset tool -->
+            <div id="offsetWrap">
+                <input type="checkbox" id="offsetToggle" title="Enable offset">
+                <label for="offsetToggle" style="color:#2196F3;font-weight:600;cursor:pointer">Offset</label>
+                <div id="offsetFields">
+                    <span style="color:#555;font-size:0.88rem">Start at</span>
+                    <input type="number" id="offsetVal" min="0" value="0" style="width:90px;border-color:#2196F3">
+                    <button id="applyOffset" style="background:#2196F3;color:#fff;padding:5px 12px;border:none;border-radius:6px;cursor:pointer;font-weight:600">Apply</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="info">Press <strong>Start</strong> to run the sieve</div>
+        <div id="grid"></div>
+
+        <script>
+            let COLS = 10, ROWS = 10;
+            let OFFSET = 0; // sieve covers (OFFSET+1) .. (OFFSET+N)
+            let useOffset = false;
+
+            const gridEl    = document.getElementById('grid');
+            const info      = document.getElementById('info');
+            const startBtn  = document.getElementById('startBtn');
+            const restartBtn= document.getElementById('restartBtn');
+            const speedSlider = document.getElementById('speed');
+            const offsetToggle = document.getElementById('offsetToggle');
+            const offsetFields = document.getElementById('offsetFields');
+            const offsetValEl  = document.getElementById('offsetVal');
+
+            let cells = [], running = false, timeouts = [];
+
+            /* ── helpers ── */
+            function getN()  { return COLS * ROWS; }
+            function getDelay() { return 960 - parseInt(speedSlider.value); }
+
+            function cellSize() {
+                const n = getN();
+                if (n <= 25)   return 64;
+                if (n <= 100)  return 52;
+                if (n <= 300)  return 40;
+                if (n <= 600)  return 32;
+                if (n <= 1000) return 26;
+                return 20;
+            }
+            function fontSize(sz, num) {
+                const big = num > 999999;
+                if (sz >= 52) return big ? '0.55rem' : '1rem';
+                if (sz >= 40) return big ? '0.48rem' : '0.82rem';
+                if (sz >= 30) return big ? '0.42rem' : '0.7rem';
+                if (sz >= 22) return big ? '0.36rem' : '0.6rem';
+                return big ? '0.3rem' : '0.5rem';
+            }
+
+            function sleep(ms) {
+                return new Promise(r => { const t = setTimeout(r, Math.max(0, ms)); timeouts.push(t); });
+            }
+
+            /* ── grid ── */
+            function buildGrid() {
+                const N = getN();
+                const sz = cellSize();
+                gridEl.innerHTML = '';
+                gridEl.style.gridTemplateColumns = `repeat(${COLS}, ${sz}px)`;
+                gridEl.style.gridTemplateRows    = `repeat(${ROWS}, ${sz}px)`;
+                cells = [];
+                for (let i = 1; i <= N; i++) {
+                    const el = document.createElement('div');
+                    el.classList.add('cell');
+                    el.style.width    = sz + 'px';
+                    el.style.height   = sz + 'px';
+                    const num = OFFSET + i;
+                    el.style.fontSize = fontSize(sz, num);
+                    if (!useOffset && i === 1) el.classList.add('one'); // 1 is neither
+                    el.textContent = num;
+                    gridEl.appendChild(el);
+                    cells.push(el);
+                }
+            }
+
+            /* ── animation ── */
+            async function runSieve() {
+                running = true;
+                startBtn.disabled = true;
+
+                const N = getN();
+
+                if (!useOffset) {
+                    // Classic sieve from 1..N with animation
+                    const isComp = new Array(N + 2).fill(false);
+                    isComp[0] = true; // 1
+
+                    for (let p = 2; p * p <= N; p++) {
+                        if (!isComp[p - 1]) {
+                            cells[p - 1].classList.add('selected');
+                            info.innerHTML = `Marking multiples of <strong>${p}</strong>`;
+                            await sleep(getDelay());
+
+                            for (let m = p * p; m <= N; m += p) {
+                                if (!isComp[m - 1]) {
+                                    isComp[m - 1] = true;
+                                    cells[m - 1].classList.add('crossing');
+                                    await sleep(Math.max(0, getDelay() / 5));
+                                    cells[m - 1].classList.remove('crossing');
+                                    cells[m - 1].classList.add('notPrime');
+                                }
+                            }
+                            cells[p - 1].classList.remove('selected');
+                            cells[p - 1].classList.add('prime');
+                            await sleep(getDelay() / 2);
+                        }
+                    }
+
+                    // Remaining unmarked (> sqrt(N)) are prime
+                    let count = 0;
+                    for (let i = 2; i <= N; i++) {
+                        if (!isComp[i - 1]) { cells[i - 1].classList.add('prime'); count++; }
+                    }
+                    info.innerHTML = `✅ Found <strong>${count} primes</strong> in 1–${N}`;
+
+                } else {
+                    // Offset mode: animated segmented sieve
+                    // Window: lo..hi  where lo = OFFSET+1, hi = OFFSET+N
+                    const lo = OFFSET + 1;
+                    const hi = OFFSET + N;
+                    const limit = Math.ceil(Math.sqrt(hi));
+
+                    // 1. Small sieve to find primes up to `limit`
+                    const smallSieve = new Array(limit + 1).fill(true);
+                    if (limit >= 0) smallSieve[0] = false;
+                    if (limit >= 1) smallSieve[1] = false;
+                    for (let i = 2; i * i <= limit; i++)
+                        if (smallSieve[i])
+                            for (let j = i * i; j <= limit; j += i) smallSieve[j] = false;
+                    const smallPrimes = [];
+                    for (let i = 2; i <= limit; i++) if (smallSieve[i]) smallPrimes.push(i);
+
+                    // seg[k] tracks whether (lo+k) is still considered prime
+                    const seg = new Array(N).fill(true);
+                    // Numbers < 2 are not prime
+                    for (let k = 0; k < N; k++) if (lo + k < 2) seg[k] = false;
+
+                    // 2. For each small prime, cross out its multiples in the window.
+                    //    Animate the first 100 primes; apply the rest silently.
+                    for (let pi = 0; pi < smallPrimes.length; pi++) {
+                        const p = smallPrimes[pi];
+                        const animate = pi < 100;
+
+                        let start = Math.ceil(lo / p) * p;
+                        if (start === p) start += p;
+
+                        if (animate) {
+                            if (start > hi) {
+                                info.innerHTML = `Sieving with prime <strong>${p}</strong> <span style="color:#aaa">(no multiples in window)</span>`;
+                                await sleep(getDelay() / 3);
+                                continue;
+                            }
+                            info.innerHTML = `Crossing out multiples of <strong>${p}</strong> in window`;
+                            await sleep(getDelay() / 2);
+                        }
+
+                        for (let m = start; m <= hi; m += p) {
+                            const k = m - lo;
+                            if (seg[k]) {
+                                seg[k] = false;
+                                if (animate) {
+                                    cells[k].classList.add('crossing');
+                                    await sleep(Math.max(20, getDelay() / 5));
+                                    cells[k].classList.remove('crossing');
+                                }
+                                cells[k].classList.add('notPrime');
+                            }
+                        }
+
+                        if (animate) await sleep(getDelay() / 3);
+                    }
+
+                    if (smallPrimes.length > 100) {
+                        info.innerHTML = `Finalising…`;
+                        await sleep(100);
+                    }
+
+                    // 3. Reveal remaining as prime
+                    let count = 0;
+                    for (let k = 0; k < N; k++) {
+                        if (seg[k]) { cells[k].classList.add('prime'); count++; }
+                    }
+                    info.innerHTML = `✅ Found <strong>${count} primes</strong> in ${lo}–${hi} (sieved with primes up to ${limit})`;
+                }
+
+                running = false;
+                startBtn.disabled = false;
+            }
+
+            function reset() {
+                timeouts.forEach(clearTimeout);
+                timeouts = [];
+                running = false;
+                startBtn.disabled = false;
+                info.innerHTML = 'Press <strong>Start</strong> to run the sieve';
+                buildGrid();
+            }
+
+            /* ── controls ── */
+            startBtn.addEventListener('click', () => { if (!running) runSieve(); });
+            restartBtn.addEventListener('click', reset);
+
+            document.getElementById('applySize').addEventListener('click', () => {
+                if (running) return;
+                const c = parseInt(document.getElementById('inputCols').value);
+                const r = parseInt(document.getElementById('inputRows').value);
+                if (!c || !r || c < 2 || r < 2 || c > 100 || r > 100) {
+                    info.textContent = '⚠️ Cols: 2–100, Rows: 2–100';
+                    return;
+                }
+                COLS = c; ROWS = r;
+                reset();
+            });
+
+            offsetToggle.addEventListener('change', () => {
+                useOffset = offsetToggle.checked;
+                offsetFields.classList.toggle('visible', useOffset);
+                if (!useOffset) OFFSET = 0;
+                reset();
+            });
+
+            document.getElementById('applyOffset').addEventListener('click', () => {
+                if (running) return;
+                const v = parseInt(offsetValEl.value);
+                if (isNaN(v) || v < 0) { info.textContent = '⚠️ Offset must be ≥ 0'; return; }
+                OFFSET = v;
+                reset();
+            });
+
+            buildGrid();
+        </script>
+    </body>
+</html>
