@@ -41,12 +41,95 @@
             text-align: center;
             margin-top: 2em;
         }
+        .friend-link-container {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            text-align: left;
+        }
+        .friend-link-btn {
+            background: white;
+            color: black;
+            padding: 10px 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            cursor: pointer;
+            font-weight: bold;
+            border: none;
+        }
+        .friend-link-card {
+            display: none;
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 10px;
+            width: 250px;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            overflow: hidden;
+            z-index: 100;
+        }
+        .friend-link-card.show {
+            display: block;
+        }
+        .card-top {
+            background-color: #4CAF50;
+            height: 60px;
+        }
+        .card-bottom {
+            background-color: white;
+            padding: 15px;
+            text-align: center;
+            position: relative;
+        }
+        .card-bottom img {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: 3px solid white;
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        .card-content {
+            margin-top: 35px;
+        }
+        .card-content a {
+            text-decoration: none;
+            color: black;
+        }
+        .card-title {
+            color: black;
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+        .card-desc {
+            font-size: 12px;
+            color: gray;
+        }
     </style>
 </head>
 <body>
 
 <header>
     <h1>你好</h1>
+    <div class="friend-link-container">
+        <button class="friend-link-btn" onclick="document.getElementById('friendCard').classList.toggle('show')">友情链接</button>
+        <div class="friend-link-card" id="friendCard">
+            <a href="https://www.ccwmoran.top/" target="_blank" style="text-decoration: none;">
+                <div class="card-top"></div>
+                <div class="card-bottom">
+                    <img src="https://gpo.saobby.com/i/BA9EN3Rw3fzRUJmu.jpg" alt="CCWMORAN慕然科技">
+                    <div class="card-content">
+                        <div class="card-title">CCWMORAN慕然科技</div>
+                        <div class="card-desc">愿你在峥嵘长青的世界里热忱不息</div>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
 </header>
 <body>
     <img src="imgs/orange.png">
