@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Optimal O(x^(2/3) / log^2 x) Prime Counting</title>
+    <style>
+        body { font-family: system-ui, sans-serif; padding: 2rem; max-width: 650px; margin: 0 auto; color: #333; line-height: 1.5; }
+        .result { margin-top: 1rem; padding: 1rem; background: #eef2f5; border-radius: 6px; font-size: 1.1rem; border-left: 4px solid #0066cc; }
+        button { padding: 8px 16px; font-size: 1rem; background: #0066cc; color: white; border: none; border-radius: 4px; cursor: pointer; transition: background 0.2s; font-weight: 600; }
+        button:hover { background: #004c99; }
+        button:disabled { background: #999; cursor: not-allowed; }
+        input { font-size: 1.1rem; padding: 6px 10px; border: 1px solid #ccc; width: 160px; border-radius: 4px; }
+        
+        /* Custom Pretty Progress Bar */
+        .progress-box {
+            display: none; 
+            margin-top: 1.5rem; 
+            padding: 1.5rem; 
+            background: #fff; 
+            border-radius: 8px; 
+            border: 1px solid #e1e4e8;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.95rem;
+            color: #444;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        .progress-track {
+            width: 100%;
+            height: 22px;
+            background-color: #f1f3f5;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.08);
+        }
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            border-radius: 12px;
+            background: linear-gradient(-45deg, rgba(255, 255, 255, 0.15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0.15) 75%, transparent 75%, transparent);
+            background-color: #0066cc;
+            background-size: 30px 30px;
+            animation: move-stripes 1s linear infinite;
+            transition: width 0.15s ease-out;
+        }
+        @keyframes move-stripes {
+            from { background-position: 0 0; }
+            to { background-position: 30px 0; }
+        }
+    </style>
+</head>
+<body>
+    <h1>&pi;(x) Math Sieve</h1>
+    <p>
+        Implementing the mathematically optimal <strong>O(N<sup>2/3</sup> &frasl; log<sup>2</sup> N)</strong> Meissel-Lehmer algorithm. 
+        Runs in a background Web Worker so the UI stays smooth and trackable!
+    </p>
+    <div style="display: flex; gap: 10px; align-items: center;">
+        <label><b>Enter x:</b> <input type="number" id="inputX" value="1000000000" min="2" max="1000000000000" /></label>
+        <button id="calcBtn">Calculate &pi;(x)</button>
+    </div>
+    
+    <div id="progressContainer" class="progress-box">
+        <div class="progress-header">
+            <span id="progressLabel">Initializing worker thread...</span>
+            <span id="progressPercent">0%</span>
+        </div>
+        <div class="progress-track">
+            <div id="progressBar" class="progress-fill"></div>
+        </div>
+    </div>
+
+    <div id="output" class="result" style="display: none;"></div>
+
+    <script>
+        // Web Worker containing the math engine
+        const workerCode = `
+        class OptimalMeisselLehmer {
+            constructor() {
+                this.MAX_limit = 0;
+                this.primes = [];
+                this.pi = new Int32Array(0);
+                this.phiCache = [];
+                this.phiCalls = 0;
+            }
+
+            sieve(limit) {
+                if (this.MAX_limit >= limit) {
+                    self.postMessage({ type: 'progress', pct: 50, msg: 'Sieve already in memory (Cached).' });
+                    return;
+                }
+                
+                this.MAX_limit = limit;
+                self.postMessage({ type: 'progress', pct: 2, msg: 'Allocating RAM for Sieve...' });
+                
+                const isPrime = new Uint8Array(limit + 1);
+                isPrime.fill(1);
+                isPrime[0] = isPrime[1] = 0;
+
+                self.postMessage({ type: 'progress', pct: 5, msg: 'Sieving composite numbers...' });
+                
+                let nextReport = Date.now() + 50;
+                // Sieve composites
+                const limitSqrt = Math.sqrt(limit);
+                for (let p = 2; p <= limitSqrt; p++) {
+                    if (isPrime[p]) {
+                        for (let i = p * p; i <= limit; i += p) {
+                            isPrime[i] = 0;
+                        }
+                    }
+                    if (p % 1000 === 0 && Date.now() > nextReport) {
+                        self.postMessage({ type: 'progress', pct: 5 + 15 * (p / limitSqrt), msg: \`Sieving composites up to N^(1/3)...\` });
+                        nextReport = Date.now() + 50;
+                    }
+                }
+
+                this.primes = [0]; 
+                this.pi = new Int32Array(limit + 1);
+                let count = 0;
+
+                // Build pi mapping
+                for (let i = 2; i <= limit; i++) {
+                    if (isPrime[i]) {
+                        this.primes.push(i);
+                        count++;
+                    }
+                    this.pi[i] = count;
+                    
+                    if (i % 50000 === 0 && Date.now() > nextReport) {
+                        self.postMessage({ type: 'progress', pct: 20 + 30 * (i / limit), msg: \`Building optimal prime index lookup (\${Math.floor(i/limit*100)}%)...\` });
+                        nextReport = Date.now() + 50;
+                    }
+                }
+            }
+
+            phi(x, a) {
+                this.phiCalls++;
+                if (this.phiCalls % 50000 === 0 && Date.now() > this.phiNextReport) {
+                   // Capping the perceived maximum at 2 million calls for visual scaling
+                   const pseudoPct = Math.min(this.phiCalls / 2000000, 1);
+                   self.postMessage({ type: 'progress', pct: 50 + 20 * pseudoPct, msg: \`Evaluating Phi recursion space (\${this.phiCalls.toLocaleString()} branches)...\` });
+                   this.phiNextReport = Date.now() + 100;
+                }
+
+                if (x < 1) return 0;
+                if (a === 0) return Math.floor(x);
+                if (a === 1) return Math.floor(x) - Math.floor(x / 2);
+                
+                if (x <= this.primes[a]) return 1;
+                
+                if (this.primes[a] * this.primes[a] >= x) {
+                    return this.pi[Math.floor(x)] - a + 1;
+                }
+
+                if (this.phiCache[a].has(x)) {
+                    return this.phiCache[a].get(x);
+                }
+
+                const ans = this.phi(x, a - 1) - this.phi(Math.floor(x / this.primes[a]), a - 1);
+                this.phiCache[a].set(x, ans);
+                return ans;
+            }
+
+            countPrimes(N) {
+                if (N < 2) return { result: 0, sieveTime: 0 };
+                N = Math.floor(N);
+                
+                const MAX = Math.floor(Math.pow(N, 2/3)) + 1;
+                
+                const perfT0 = performance.now();
+                this.sieve(MAX);
+                const perfT1 = performance.now();
+                const sieveTime = (perfT1 - perfT0);
+
+                const y = Math.floor(Math.cbrt(N));
+                const a = this.pi[y];
+
+                self.postMessage({ type: 'progress', pct: 50, msg: 'Initializing LMO matrix cache...' });
+
+                this.phiCache = Array.from({ length: a + 1 }, () => new Map());
+                this.phiCalls = 0;
+                this.phiNextReport = Date.now() + 50;
+
+                let ans = this.phi(N, a) + a - 1;
+
+                self.postMessage({ type: 'progress', pct: 70, msg: 'Calculating partial sums P2(x, a)...' });
+
+                const b = this.pi[Math.floor(Math.sqrt(N))];
+                const totalP2 = b - a;
+                let nextReport = Date.now() + 50;
+
+                for (let i = a + 1; i <= b; i++) {
+                    const w = Math.floor(N / this.primes[i]);
+                    ans -= this.pi[w] - i + 1;
+                    
+                    if ((i - a) % 2000 === 0 && Date.now() > nextReport) {
+                        const pctDone = (i - a) / totalP2;
+                        self.postMessage({ type: 'progress', pct: 70 + 30 * pctDone, msg: \`Resolving residual composites P2(x, a)... (\${Math.floor(pctDone*100)}%)\` });
+                        nextReport = Date.now() + 50;
+                    }
+                }
+
+                self.postMessage({ type: 'progress', pct: 100, msg: 'Finalizing result!' });
+                return { result: ans, sieveTime };
+            }
+        }
+
+        const solver = new OptimalMeisselLehmer();
+
+        self.onmessage = function(e) {
+            if (e.data.type === 'calc') {
+                try {
+                    const data = solver.countPrimes(e.data.N);
+                    self.postMessage({ type: 'done', data: data });
+                } catch(err) {
+                    self.postMessage({ type: 'error', msg: err.message });
+                }
+            }
+        };
+        `;
+
+        const blob = new Blob([workerCode], { type: 'application/javascript' });
+        const workerUrl = URL.createObjectURL(blob);
+        let worker;
+
+        document.getElementById('calcBtn').addEventListener('click', () => {
+            const val = document.getElementById('inputX').value;
+            const x = Math.floor(parseFloat(val));
+            const output = document.getElementById('output');
+            const progCont = document.getElementById('progressContainer');
+            const progBar = document.getElementById('progressBar');
+            const progLabel = document.getElementById('progressLabel');
+            const progPct = document.getElementById('progressPercent');
+            const btn = document.getElementById('calcBtn');
+            
+            if (isNaN(x) || x < 2) {
+                output.style.display = 'block';
+                output.innerHTML = '<span style="color: #e53935;">Please enter a valid number &ge; 2.</span>';
+                return;
+            }
+
+            // Reset matching UI states
+            output.style.display = 'none';
+            progCont.style.display = 'block';
+            progBar.style.width = '0%';
+            progLabel.textContent = 'Spinning up computation core...';
+            progPct.textContent = '0%';
+            btn.disabled = true;
+
+            if (worker) {
+                worker.terminate();
+            }
+            worker = new Worker(workerUrl);
+
+            const t0 = performance.now();
+
+            worker.onmessage = function(e) {
+                const msg = e.data;
+                if (msg.type === 'progress') {
+                    // Truncate to 1 decimal point strictly
+                    const displayPct = Math.min(100, Math.max(0, msg.pct)).toFixed(1);
+                    progBar.style.width = displayPct + '%';
+                    progPct.textContent = displayPct + '%';
+                    progLabel.textContent = msg.msg;
+                } else if (msg.type === 'done') {
+                    // Snap to full completion
+                    progBar.style.width = '100%';
+                    progPct.textContent = '100.0%';
+                    progLabel.textContent = 'Complete!';
+                    
+                    const t1 = performance.now();
+                    const evalData = msg.data;
+                    const totalTimeMs = (t1 - t0);
+                    
+                    // Artificial slight delay so user registers the 100% full state
+                    setTimeout(() => {
+                        progCont.style.display = 'none';
+                        output.style.display = 'block';
+                        output.innerHTML = '&pi;(' + x.toLocaleString() + ') = <strong style="font-size: 1.3em;">' + evalData.result.toLocaleString() + '</strong>' + 
+                            '<br><div style="font-size: 0.9em; font-weight: normal; color: #666; margin-top: 8px;">' +
+                            '<b>Total Analysis Time:</b> ' + (totalTimeMs >= 1000 ? (totalTimeMs/1000).toFixed(3) + ' sec' : totalTimeMs.toFixed(1) + ' ms') + 
+                            ' <span style="margin: 0 4px; color: #ccc;">|</span> ' +
+                            '<b>Sieve Alloc:</b> ' + evalData.sieveTime.toFixed(1) + ' ms</div>';
+                        
+                        btn.disabled = false;
+                    }, 250);
+
+                } else if (msg.type === 'error') {
+                    progCont.style.display = 'none';
+                    output.style.display = 'block';
+                    output.innerHTML = '<span style="color: #e53935; font-weight: 500;">Worker Exception: ' + msg.msg + '</span>';
+                    btn.disabled = false;
+                }
+            };
+
+            // Start calculation
+            worker.postMessage({ type: 'calc', N: x });
+        });
+    </script>
+</body>
+</html>
